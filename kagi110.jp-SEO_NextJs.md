@@ -46,3 +46,29 @@ Delacon のコールトラッキングはもう使っていなくて、CallDataB
 /Users/y-amano/development/test-site/kagi110ban.jp-figma でcalldatabankの実装をしています。
 これは、figmaからS3におくHTMLサイトを構築する手法で現在本番稼働中ですので参考になるはずです。
 
+## DBを本番からインポートする
+
+```
+cd ~/development/test-site/kagi110ban.jp && D=$(date +%y%m%d) \
+&& ssh kagi110ban.jp "cd <WP_ROOT> \
+&& wp db export - --single-transaction --quick \
+| gzip -c" > tmp/db-backup/wp_kagi_$D.sql.gz \
+&& docker compose exec -T db mariadb-dump -uroot -ppassword --single-transaction --quick wp_kagi \
+| gzip -c > tmp/db-backup/local_before_$D.sql.gz \
+&& docker compose exec -T db mariadb -uroot -ppassword -e \
+"DROP DATABASE wp_kagi; CREATE DATABASE wp_kagi CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci;" \
+&& gunzip -c tmp/db-backup/wp_kagi_$D.sql.gz \
+| docker compose exec -T db mariadb -uroot -ppassword wp_kagi \
+&& docker compose exec -T wp bash -c 'for u in https://www.kagi110ban.jp https://wp-kagi.sharing-tech.co.jp; do wp search-replace "$u" "http://localhost:3080" --allow-root 2>&1 | grep -v Xdebug \
+| tail -1; done; wp cache flush --allow-root 2>&1 \
+| grep -v Xdebug' \
+&& docker compose exec -T db mariadb -uroot -ppassword wp_kagi -e "UPDATE EE0ArYeh_posts SET post_content = REPLACE(post_content, '\"linkData\":{\"url\":\"http://localhost:3080/', '\"linkData\":{\"url\":\"https://www.kagi110ban.jp/') WHERE post_content LIKE '%\"linkData\":{\"url\":\"http://localhost:3080/%'; SELECT ROW_COUNT() AS blogcards_fixed;" \
+&& curl -s -o /dev/null -w 'shinjuku=%{http_code}\n' http://localhost:3080/tokyo/shinjuku/
+```
+上記はShellScriptにしてあります。
+tools/refresh-db.sh
+
+
+
+
+
