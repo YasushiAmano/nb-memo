@@ -68,6 +68,11 @@ cd ~/development/test-site/kagi110ban.jp && D=$(date +%y%m%d) \
 上記はShellScriptにしてあります。
 tools/refresh-db.sh
 
+https://d2rbz8essidouk.cloudfront.net/
+Basic認証
+ID: kagi
+パスワード: u4UAU6u7guPEz75cKCWM
+
 
 
 
